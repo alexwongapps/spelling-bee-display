@@ -88,6 +88,16 @@
     return hash;
 }
 
+function hashCode2(str) {
+    let hash = 0;
+    for (let i = 0, len = str.length; i < len; i++) {
+        let chr = str.charCodeAt(i);
+        hash = (hash >> 4) + hash - 2 * chr;
+        hash |= 0;
+    }
+    return hash;
+}
+
     const supabaseUrl = "https://nsvahbnwtwssxjdjtaje.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zdmFoYm53dHdzc3hqZGp0YWplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NTk3NTgsImV4cCI6MjA3MzUzNTc1OH0.rvausjZ3g3owu-s7vMxw6kdl-fsYO2owno-froC9doI";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -103,7 +113,7 @@
           return `<span style="color: ${color}">${l}</span>`;
         }).join("");
       document.getElementById("now-spelling").innerHTML = `Now spelling: ${state.name}`;
-      document.getElementById("contestants-left").innerHTML = `100 contestants left`; // todo alex: fill
+      document.getElementById("contestants-left").innerHTML = state.left == -1 ? "" : `${state.left} contestants left`;
     }
 
     async function init() {
@@ -157,6 +167,7 @@
           const pwd = prompt("Enter password:");
           if (hashCode(pwd) == 1753972998) {
             canEdit = true;
+            currentState.edit_hash = hashCode2(pwd).toString();
             supabaseClient.removeChannel(channel);
             alert("Edit mode unlocked!");
           }
@@ -175,6 +186,10 @@
         currentState.wrong_index = -1;
       } else if (e.key === "ArrowDown") {
         currentState.wrong_index = state.index;
+      } else if (e.key === "l") {
+        currentState.left = state.left - 1;
+      } else if (e.key === ";") {
+        currentState.left = state.left + 1;
       }
 
       updateRow(currentState);
