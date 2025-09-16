@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Word Game</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: sans-serif;
+      margin: 0px;
+    }
+
+    #word {
+      letter-spacing: 0.3rem;
+      margin-top: 10px;
+      overflow-wrap: break-word;
+      white-space: normal;
+      max-width: 100%;
+      font-size: 100px;
+    }
+
+    #top-bar {
+      max-width: 100%;
+      padding: 10px;
+      background: #f0f0f0;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    #now-spelling,
+    #contestants-left {
+      font-size: 40px;
+      margin-top: 20px;
+    }
+
+    #controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #f0f0f0;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    #controls button {
+      margin: 5px;
+      padding: 8px 12px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="top-bar">
+    <h1>Spelling Bee</h1>
+  </div>
+  <div id="now-spelling"></div>
+  <div id="contestants-left"></div>
+  <div id="word">Loading...</div>
+  <div id="controls">
+    <button id="increase">Increase Font</button>
+    <button id="decrease">Decrease Font</button>
+  </div>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    const wordDiv = document.getElementById("word");
+    let fontSize = 100;
+    document.getElementById("increase").addEventListener("click", () => {
+      fontSize += 10;
+      wordDiv.style.fontSize = fontSize + "px";
+    });
+
+    document.getElementById("decrease").addEventListener("click", () => {
+      fontSize = Math.max(10, fontSize - 10); // don’t let it go too small
+      wordDiv.style.fontSize = fontSize + "px";
+    });
+
+    function hashCode(str) {
+    let hash = 0;
+    for (let i = 0, len = str.length; i < len; i++) {
+        let chr = str.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0;
+    }
+    return hash;
+}
+
+    const supabaseUrl = "https://nsvahbnwtwssxjdjtaje.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zdmFoYm53dHdzc3hqZGp0YWplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NTk3NTgsImV4cCI6MjA3MzUzNTc1OH0.rvausjZ3g3owu-s7vMxw6kdl-fsYO2owno-froC9doI";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    let currentState = null;
+    let canEdit = false;
+    let channel = null;
+
+    function render(state) {
+      const list = [...state.word];
+      wordDiv.innerHTML =
+        list.map((l, i) => {
+          const color = i == state.wrong_index ? "red" : (i < state.index ? "green" : "black");
+          return `<span style="color: ${color}">${l}</span>`;
+        }).join("");
+      document.getElementById("now-spelling").innerHTML = `Now spelling: ${state.name}`;
+      document.getElementById("contestants-left").innerHTML = `100 contestants left`; // todo alex: fill
+    }
+
+    async function init() {
+      wordDiv.style.fontSize = fontSize + "px";
+      // fetch the single row (assuming you know its id)
+      let { data } = await supabaseClient
+        .from("state")
+        .select("*")
+        .limit(1)
+        .single();
+
+      currentState = data;
+      render(currentState);
+
+      channel = supabaseClient.channel("state");
+      channel.on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "state" },
+        payload => {
+          currentState = payload.new;
+          console.log(payload.new);
+          render(currentState);
+        }
+      )
+        .subscribe();
+    }
+
+    async function updateRow(newData) {
+      const { error } = await supabaseClient
+        .from("state")
+        .update(newData)
+        .eq("id", 1)
+
+      if (error) console.error(error)
+    }
+
+    init();
+
+    document.addEventListener("keydown", async (e) => {
+      if (e.key === "h") {
+        const controls = document.getElementById("controls");
+        if (controls.style.display === "none") {
+          controls.style.display = "block";
+        } else {
+          controls.style.display = "none";
+        }
+      }
+      if (!currentState) return;
+      if (!canEdit) {
+        if (e.key === "a") {
+          const pwd = prompt("Enter password:");
+          if (hashCode(pwd) == 1753972998) {
+            canEdit = true;
+            supabaseClient.removeChannel(channel);
+            alert("Edit mode unlocked!");
+          }
+        }
+        return; // block edits unless unlocked
+      }
+
+      let state = { ...currentState };
+
+      if (e.key === "ArrowRight" && state.wrong_index == -1) {
+        currentState.index = state.index + 1;
+      } else if (e.key === "n") {
+        const new_word = prompt("New word");
+        currentState.word = new_word;
+        currentState.index = 0;
+        currentState.wrong_index = -1;
+      } else if (e.key === "ArrowDown") {
+        currentState.wrong_index = state.index;
+      }
+
+      updateRow(currentState);
+      render(currentState);
+    });
+  </script>
+</body>
+
+</html>
