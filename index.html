@@ -50,6 +50,49 @@
       padding: 8px 12px;
       font-size: 30px;
     }
+
+    /* Dark background overlay */
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none; /* hidden by default */
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Popup box */
+    #promptBox {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 600px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    /* Input field with bigger text */
+    #promptInput {
+      width: 90%;
+      padding: 10px;
+      font-size: 40px;  /* makes text bigger */
+      margin-top: 10px;
+    }
+
+    #promptButton {
+      margin: 10px 5px 0;
+      padding: 8px 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    #promptButton.cancel {
+      background: #aaa;
+    }
   </style>
 </head>
 
@@ -58,6 +101,15 @@
     <h1>bit.ly/dolobee</h1>
   </div>
   <div id="word">Loading...</div>
+  <div id="overlay">
+    <div id="promptBox">
+      <p id="promptMessage"></p>
+      <input type="text" id="promptInput" />
+      <br>
+      <button id="promptButton" onclick="submitPrompt()">OK</button>
+      <button id="promptButton" class="cancel" onclick="closePrompt()">Cancel</button>
+    </div>
+  </div>
   <div id="controls">
     <button id="increase">Increase Font</button>
     <button id="decrease">Decrease Font</button>
@@ -94,6 +146,35 @@
         hash |= 0;
       }
       return hash;
+    }
+
+    function customPrompt() {
+      document.getElementById("promptMessage").innerText = "New word:";
+      document.getElementById("promptInput").value = "";
+      document.getElementById("overlay").style.display = "flex";
+      document.getElementById("promptInput").focus();
+
+      // Add Enter key listener
+      document.getElementById("promptInput").onkeydown = function(e) {
+        if (e.key === "Enter") {
+          submitPrompt();
+        }
+      };
+    }
+
+    function closePrompt() {
+      document.getElementById("overlay").style.display = "none";
+    }
+
+    function submitPrompt() {
+      let value = document.getElementById("promptInput").value;
+      document.getElementById("overlay").style.display = "none";
+      if (!currentState) return;
+      currentState.word = value;
+      currentState.index = 0;
+      currentState.wrong_index = -1;
+      updateRow(currentState);
+      render(currentState);
     }
 
     const supabaseUrl = "https://nsvahbnwtwssxjdjtaje.supabase.co";
@@ -149,6 +230,11 @@
     init();
 
     document.addEventListener("keydown", async (e) => {
+      console.log(document.getElementById("overlay").style.display);
+      if (document.getElementById("overlay").style.display === "flex") {
+        return;
+      }
+
       if (e.key === "h") {
         const controls = document.getElementById("controls");
         if (controls.style.display === "none") {
@@ -173,19 +259,28 @@
 
       let state = { ...currentState };
 
+      if (e.key === "n") {
+        customPrompt();
+        e.preventDefault();
+        return
+      }
+
       if (e.key === "ArrowRight" && state.wrong_index == -1 && state.index < state.word.length) {
-        currentState.index = state.index + 1;
+        let i = state.index;
+        while (state.word.charAt(i + 1) === " ") {
+          i += 1;
+        }
+        currentState.index = i + 1;
       } else if (e.key === "ArrowLeft") {
         if (state.wrong_index != -1) {
           currentState.wrong_index = -1;
         } else if (state.index > 0) {
-          currentState.index = state.index - 1;
+          let i = state.index;
+          while (state.word.charAt(i - 1) === " ") {
+            i -= 1;
+          }
+          currentState.index = i - 1;
         }
-      } else if (e.key === "n") {
-        const new_word = prompt("New word");
-        currentState.word = new_word;
-        currentState.index = 0;
-        currentState.wrong_index = -1;
       } else if (e.key === "ArrowDown" && state.index < state.word.length) {
         currentState.wrong_index = state.index;
       }
