@@ -111,7 +111,6 @@
     </div>
   </div>
   <div id="controls">
-    <h1>bit.ly/dolobee</h1>
     <button id="increase">Increase Font</button>
     <button id="decrease">Decrease Font</button>
   </div>
@@ -286,10 +285,10 @@
       } else if (e.key === "ArrowDown" && state.index < state.word.length) {
         currentState.wrong_index = state.index;
       } else if (e.key === "m") {
-        const newMessage = prompt("Enter message:", "bit.ly/dolobee");
+        const newMessage = prompt("Enter message:");
         if (newMessage !== null) {
           if (newMessage.length > 0) {
-            currentState.message = newMessage;
+            currentState.message = "bit.ly/dolobee — " + newMessage;
           } else {
             currentState.message = "bit.ly/dolobee";
           }
