@@ -98,7 +98,7 @@
 
 <body>
   <div id="top-bar">
-    <h1>bit.ly/dolobee</h1>
+    <h1 id="top-bar-text">bit.ly/dolobee</h1>
   </div>
   <div id="word">Loading...</div>
   <div id="overlay">
@@ -111,6 +111,7 @@
     </div>
   </div>
   <div id="controls">
+    <h1>bit.ly/dolobee</h1>
     <button id="increase">Increase Font</button>
     <button id="decrease">Decrease Font</button>
   </div>
@@ -186,6 +187,7 @@
 
     function render(state) {
       const list = [...state.word];
+      document.getElementById("top-bar-text").innerHTML = state.message;
       wordDiv.innerHTML =
         list.map((l, i) => {
           const color = i == state.wrong_index ? "red" : (i < state.index ? "green" : "black");
@@ -283,6 +285,15 @@
         }
       } else if (e.key === "ArrowDown" && state.index < state.word.length) {
         currentState.wrong_index = state.index;
+      } else if (e.key === "m") {
+        const newMessage = prompt("Enter message:", "bit.ly/dolobee");
+        if (newMessage !== null) {
+          if (newMessage.length > 0) {
+            currentState.message = newMessage;
+          } else {
+            currentState.message = "bit.ly/dolobee";
+          }
+        }
       }
 
       updateRow(currentState);
